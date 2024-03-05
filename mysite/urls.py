@@ -20,4 +20,5 @@ from django.urls import path
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/send_song/', send_song, name='send_song_api'),
+    path('', admin.site.urls),
 ]
