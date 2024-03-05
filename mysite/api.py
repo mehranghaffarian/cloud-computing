@@ -2,7 +2,7 @@ from django.http import JsonResponse
 import boto3
 import uuid
 import psycopg2
-from botocore.config import Config
+import pika
 
 
 def send_song(request):
@@ -27,7 +27,7 @@ def send_song(request):
             # s3_client.upload_fileobj(song, bucket_name, file_key)
             message = "Song uploaded successfully to S3 bucket"
         except Exception as e:
-            message = f"Error uploading song to S3 bucket, error: {e}"
+            message = f"Error uploading song to S3 bucket, previous step: {message}, error: {e}"
 
         # recording request in the DB
         request_id = "not yet defined"
@@ -54,7 +54,7 @@ def send_song(request):
             data = (request_id, email, 'pending', "Unknown")
 
             # Execute the SQL query to insert data into the table
-            cur.execute(insert_query, data)
+            # cur.execute(insert_query, data)
 
             message = "query executed"
 
@@ -70,13 +70,25 @@ def send_song(request):
             message = f"request recorded in the database successfully, ID: {request_id}"
         except Exception as e:
             message = f"failed, previous step: {message}, request_id: {request_id}, error: {e}"
-            pass
 
         # adding the request ID to rabbitMQ
-        # try:
-        #     message = "request ID added to rabbitMQ"
-        # except Exception as e:
-        #     message = "failed to add ID to rabbitMQ"
+        try:
+            # Connect to RabbitMQ server
+            connection = pika.BlockingConnection(pika.ConnectionParameters('amqps://pbememzq:kza9uJTLxwR1stEpuig6LvOOYwhP6R3t@octopus.rmq3.cloudamqp.com/pbememzq'))
+            channel = connection.channel()
+
+            message = "connection and channel set up"
+            # Declare a queue named 'song_requests'
+            channel.queue_declare(queue='song_requests')
+
+            # Publish the message to the queue
+            channel.basic_publish(exchange='', routing_key='song_requests', body=request_id.encode('utf-8'))
+
+            # Close the connection
+            connection.close()
+            message = "request ID added to rabbitMQ"
+        except Exception as e:
+            message = f"failed to add ID to rabbitMQ, previous step: {message}"
 
         return JsonResponse({"message": message}, status=200)
     else:
