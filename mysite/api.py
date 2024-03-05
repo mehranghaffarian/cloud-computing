@@ -75,7 +75,9 @@ def send_song(request):
         try:
             # Connect to RabbitMQ server
             message = "trying to create connection"
-            connection = pika.BlockingConnection(pika.ConnectionParameters('amqps://pbememzq:kza9uJTLxwR1stEpuig6LvOOYwhP6R3t@octopus.rmq3.cloudamqp.com/pbememzq'))
+            connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+            message = "trying to get the channel"
+
             channel = connection.channel()
 
             message = "connection and channel set up"
