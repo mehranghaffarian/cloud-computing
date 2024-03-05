@@ -32,48 +32,49 @@ def send_song(request):
         # recording request in the DB
         request_id = "not yet defined"
         try:
-            message = "trying to create conn"
-
-            # Connect to the PostgreSQL database
-            conn = psycopg2.connect(
-                dbname="postgres",
-                user="root",
-                password="e8l0D0YC8xhfY4wI1col4FMv",
-                host="monte-rosa.liara.cloud",
-                port="32270")
-            message = "conn created"
-
-            # Create a cursor object to execute SQL statements
-            cur = conn.cursor()
-
-            # Insert a record into the table
-            insert_query = """INSERT INTO songsrequests (ID, email, status, songID) VALUES (%s, %s, %s, %s)"""
+            # message = "trying to create conn"
+            #
+            # # Connect to the PostgreSQL database
+            # conn = psycopg2.connect(
+            #     dbname="postgres",
+            #     user="root",
+            #     password="e8l0D0YC8xhfY4wI1col4FMv",
+            #     host="monte-rosa.liara.cloud",
+            #     port="32270")
+            # message = "conn created"
+            #
+            # # Create a cursor object to execute SQL statements
+            # cur = conn.cursor()
+            #
+            # # Insert a record into the table
+            # insert_query = """INSERT INTO songsrequests (ID, email, status, songID) VALUES (%s, %s, %s, %s)"""
 
             request_id = str(uuid.uuid4())
-            # Example data to insert into the table
-            data = (request_id, email, 'pending', "Unknown")
-
-            # Execute the SQL query to insert data into the table
-            # cur.execute(insert_query, data)
-
-            message = "query executed"
-
-            # Commit the transaction to apply the changes
-            conn.commit()
-
-            message = "query committed"
-
-            # Close the cursor and connection
-            cur.close()
-            conn.close()
-
-            message = f"request recorded in the database successfully, ID: {request_id}"
+            # # Example data to insert into the table
+            # data = (request_id, email, 'pending', "Unknown")
+            #
+            # # Execute the SQL query to insert data into the table
+            # # cur.execute(insert_query, data)
+            #
+            # message = "query executed"
+            #
+            # # Commit the transaction to apply the changes
+            # conn.commit()
+            #
+            # message = "query committed"
+            #
+            # # Close the cursor and connection
+            # cur.close()
+            # conn.close()
+            #
+            # message = f"request recorded in the database successfully, ID: {request_id}"
         except Exception as e:
             message = f"failed, previous step: {message}, request_id: {request_id}, error: {e}"
 
         # adding the request ID to rabbitMQ
         try:
             # Connect to RabbitMQ server
+            message = "trying to create connection"
             connection = pika.BlockingConnection(pika.ConnectionParameters('amqps://pbememzq:kza9uJTLxwR1stEpuig6LvOOYwhP6R3t@octopus.rmq3.cloudamqp.com/pbememzq'))
             channel = connection.channel()
 
@@ -81,6 +82,7 @@ def send_song(request):
             # Declare a queue named 'song_requests'
             channel.queue_declare(queue='song_requests')
 
+            message = "queue declared"
             # Publish the message to the queue
             channel.basic_publish(exchange='', routing_key='song_requests', body=request_id.encode('utf-8'))
 
