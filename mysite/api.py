@@ -24,37 +24,44 @@ def send_song(request):
 
         # Upload the song file to the S3 bucket
         try:
-            s3_client.upload_fileobj(song, bucket_name, file_key)
+            # s3_client.upload_fileobj(song, bucket_name, file_key)
             message = "Song uploaded successfully to S3 bucket"
         except Exception as e:
             message = f"Error uploading song to S3 bucket, error: {e}"
 
         # recording request in the DB
+        request_id = "not yet defined"
         try:
+            message = "trying to create conn"
+
             # Connect to the PostgreSQL database
             conn = psycopg2.connect(
-                dbname="requests",
+                dbname="postgres",
                 user="root",
                 password="e8l0D0YC8xhfY4wI1col4FMv",
                 host="monte-rosa.liara.cloud",
-                port="32270"
-            )
+                port="32270")
+            message = "conn created"
 
             # Create a cursor object to execute SQL statements
             cur = conn.cursor()
 
             # Insert a record into the table
-            insert_query = """INSERT INTO SongsRequests (ID, email, status, songID) VALUES (%s, %s, %s, %s)"""
+            insert_query = """INSERT INTO songsrequests (ID, email, status, songID) VALUES (%s, %s, %s, %s)"""
 
-            request_id = uuid.uuid4()
+            request_id = str(uuid.uuid4())
             # Example data to insert into the table
             data = (request_id, email, 'pending', "Unknown")
 
             # Execute the SQL query to insert data into the table
             cur.execute(insert_query, data)
 
+            message = "query executed"
+
             # Commit the transaction to apply the changes
             conn.commit()
+
+            message = "query committed"
 
             # Close the cursor and connection
             cur.close()
@@ -62,7 +69,8 @@ def send_song(request):
 
             message = f"request recorded in the database successfully, ID: {request_id}"
         except Exception as e:
-            message = f"failed to record request in the database, error: {e}"
+            message = f"failed, previous step: {message}, request_id: {request_id}, error: {e}"
+            pass
 
         # adding the request ID to rabbitMQ
         # try:
