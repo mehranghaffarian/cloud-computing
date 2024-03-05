@@ -25,6 +25,9 @@ SECRET_KEY = 'django-insecure-rtaz^seu3vv0!q9j#vz^0u-82wihifp3npb*yte@%gjiru3ioi
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+ALLOWED_HOSTS = ['song-recommender.runflare.run', '127.0.0.1']
+
+
 # Application definition
 
 INSTALLED_APPS = [
