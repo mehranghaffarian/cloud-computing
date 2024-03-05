@@ -75,7 +75,8 @@ def send_song(request):
         try:
             # Connect to RabbitMQ server
             message = "trying to create connection"
-            connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+            connection = pika.BlockingConnection(pika.ConnectionParameters(
+                'amqps://pbememzq:kza9uJTLxwR1stEpuig6LvOOYwhP6R3t@octopus.rmq3.cloudamqp.com/pbememzq'))
             message = "trying to get the channel"
 
             channel = connection.channel()
@@ -92,7 +93,7 @@ def send_song(request):
             connection.close()
             message = "request ID added to rabbitMQ"
         except Exception as e:
-            message = f"failed to add ID to rabbitMQ, previous step: {message}"
+            message = f"failed to add ID to rabbitMQ, previous step: {message}, error: {e}"
 
         return JsonResponse({"message": message}, status=200)
     else:
