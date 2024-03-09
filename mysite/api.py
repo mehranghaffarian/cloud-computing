@@ -2,6 +2,7 @@ from django.http import JsonResponse
 import boto3
 import uuid
 import pika
+import logging
 
 from mysite.utils import execute_database_query
 
@@ -59,6 +60,8 @@ def send_song(request):
             message = f"request ID added to rabbitMQ, request_id: {request_id}"
         except Exception as e:
             message = f"failed to add ID to rabbitMQ, previous step: {message}, error: {e}"
+
+        logging.getLogger(__name__).debug('\n\nThis is a debug message\n\n')
 
         return JsonResponse({"message": message}, status=200)
     else:
