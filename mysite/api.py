@@ -3,7 +3,7 @@ import boto3
 import uuid
 import pika
 
-from mysite.mysite.utils import execute_database_query
+from mysite.utils import execute_database_query
 
 
 def send_song(request):

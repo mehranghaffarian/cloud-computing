@@ -5,7 +5,7 @@ import sys
 import asyncio
 import pika
 
-from mysite.mysite.utils import read_from_object_storage, call_shazam_api, call_spotify_search_api, \
+from mysite.utils import read_from_object_storage, call_shazam_api, call_spotify_search_api, \
     execute_database_query
 
 
