@@ -1,12 +1,15 @@
 from django.http import JsonResponse
 import boto3
 import uuid
-import psycopg2
 import pika
+
+from mysite.mysite.utils import execute_database_query
 
 
 def send_song(request):
     if request.method == 'POST':
+        request_id = str(uuid.uuid4())
+
         email = request.POST.get('email')
         song = request.FILES['song']
 
@@ -19,64 +22,26 @@ def send_song(request):
 
         # Specify the S3 bucket name and file key (path) within the bucket
         bucket_name = 'songs'
-        file_key = song.name
         message = "Unknown"
 
         # Upload the song file to the S3 bucket
         try:
-            # s3_client.upload_fileobj(song, bucket_name, file_key)
+            s3_client.upload_fileobj(song, bucket_name, request_id)
             message = "Song uploaded successfully to S3 bucket"
         except Exception as e:
             message = f"Error uploading song to S3 bucket, previous step: {message}, error: {e}"
 
         # recording request in the DB
-        request_id = "not yet defined"
-        try:
-            # message = "trying to create conn"
-            #
-            # # Connect to the PostgreSQL database
-            # conn = psycopg2.connect(
-            #     dbname="postgres",
-            #     user="root",
-            #     password="e8l0D0YC8xhfY4wI1col4FMv",
-            #     host="monte-rosa.liara.cloud",
-            #     port="32270")
-            # message = "conn created"
-            #
-            # # Create a cursor object to execute SQL statements
-            # cur = conn.cursor()
-            #
-            # # Insert a record into the table
-            # insert_query = """INSERT INTO songsrequests (ID, email, status, songID) VALUES (%s, %s, %s, %s)"""
-
-            request_id = str(uuid.uuid4())
-            # # Example data to insert into the table
-            # data = (request_id, email, 'pending', "Unknown")
-            #
-            # # Execute the SQL query to insert data into the table
-            # # cur.execute(insert_query, data)
-            #
-            # message = "query executed"
-            #
-            # # Commit the transaction to apply the changes
-            # conn.commit()
-            #
-            # message = "query committed"
-            #
-            # # Close the cursor and connection
-            # cur.close()
-            # conn.close()
-            #
-            # message = f"request recorded in the database successfully, ID: {request_id}"
-        except Exception as e:
-            message = f"failed, previous step: {message}, request_id: {request_id}, error: {e}"
+        message = execute_database_query(
+            """INSERT INTO songsrequests (ID, email, status, songID) VALUES (%s, %s, %s, %s)""",
+            (request_id, email, 'pending', "Unknown"))
 
         # adding the request ID to rabbitMQ
         try:
             # Connect to RabbitMQ server
             message = "trying to create connection"
-            connection = pika.BlockingConnection(pika.ConnectionParameters(
-                'amqps://pbememzq:kza9uJTLxwR1stEpuig6LvOOYwhP6R3t@octopus.rmq3.cloudamqp.com/pbememzq'))
+            connection = pika.BlockingConnection(pika.URLParameters(
+                url='amqps://pbememzq:kza9uJTLxwR1stEpuig6LvOOYwhP6R3t@octopus.rmq3.cloudamqp.com/pbememzq'))
             message = "trying to get the channel"
 
             channel = connection.channel()
@@ -91,7 +56,7 @@ def send_song(request):
 
             # Close the connection
             connection.close()
-            message = "request ID added to rabbitMQ"
+            message = f"request ID added to rabbitMQ, request_id: {request_id}"
         except Exception as e:
             message = f"failed to add ID to rabbitMQ, previous step: {message}, error: {e}"
 
