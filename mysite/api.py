@@ -61,7 +61,7 @@ def send_song(request):
         except Exception as e:
             message = f"failed to add ID to rabbitMQ, previous step: {message}, error: {e}"
 
-        logging.getLogger(__name__).debug('\n\nThis is a debug message\n\n')
+        logging.getLogger(__name__).info('\n\nThis is a info message\n\n')
 
         return JsonResponse({"message": message}, status=200)
     else:
