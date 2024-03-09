@@ -55,6 +55,8 @@ async def consume():
 
 
 def main():
+    logger.critical('running listening to rabbitMQ')
+    asyncio.run(listen_to_rabbitmq())
     """Run administrative tasks."""
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'mysite.settings')
     try:
@@ -67,8 +69,6 @@ def main():
         ) from exc
     execute_from_command_line(sys.argv)
 
-    logger.critical('running listening to rabbitMQ')
-    asyncio.run(listen_to_rabbitmq())
 
 
 if __name__ == '__main__':

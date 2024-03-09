@@ -9,7 +9,7 @@ from mysite.utils import execute_database_query
 
 def send_song(request):
     logger = logging.getLogger(__name__)
-    logger.critical('This is a critical message')
+    logger.critical('processing the send_song api')
 
     if request.method == 'POST':
         request_id = str(uuid.uuid4())
