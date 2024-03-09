@@ -8,6 +8,9 @@ from mysite.utils import execute_database_query
 
 
 def send_song(request):
+    logger = logging.getLogger(__name__)
+    logger.critical('This is a critical message')
+
     if request.method == 'POST':
         request_id = str(uuid.uuid4())
 
@@ -60,13 +63,6 @@ def send_song(request):
             message = f"request ID added to rabbitMQ, request_id: {request_id}"
         except Exception as e:
             message = f"failed to add ID to rabbitMQ, previous step: {message}, error: {e}"
-
-        logger = logging.getLogger(__name__)
-        logger.debug('This is a debug message')
-        logger.info('This is an info message')
-        logger.warning('This is a warning message')
-        logger.error('This is an error message')
-        logger.critical('This is a critical message')
 
         return JsonResponse({"message": message}, status=200)
     else:
