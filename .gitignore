@@ -2,3 +2,4 @@ venv/
 /.cloud/
 .cloud/
 /.cloud
+mysite/test.py

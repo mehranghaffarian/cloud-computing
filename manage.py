@@ -2,9 +2,9 @@
 """Django's command-line utility for administrative tasks."""
 import logging
 import os
-import sys
 import asyncio
 import pika
+
 
 from mysite.utils import read_from_object_storage, call_shazam_api, call_spotify_search_api, \
     execute_database_query
@@ -51,12 +51,10 @@ async def consume():
 
         channel.start_consuming()
     except Exception as e:
-        pass
+        logger.critical(f'consuming rabbitMQ faced error, error: {e}')
 
 
 def main():
-    logger.critical('running listening to rabbitMQ')
-    asyncio.run(listen_to_rabbitmq())
     """Run administrative tasks."""
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'mysite.settings')
     try:
@@ -67,10 +65,11 @@ def main():
             "available on your PYTHONPATH environment variable? Did you "
             "forget to activate a virtual environment?"
         ) from exc
-    execute_from_command_line(sys.argv)
-
+    # execute_from_command_line(sys.argv)
 
 
 if __name__ == '__main__':
     logger = logging.getLogger(__name__)
+    logger.critical('running listening to rabbitMQ')
+    # asyncio.run(listen_to_rabbitmq())
     main()
