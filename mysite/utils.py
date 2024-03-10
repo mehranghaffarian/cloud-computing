@@ -60,7 +60,7 @@ def read_from_object_storage(object_key):
         read_object = s3_client.get_object(Bucket=bucket_name, Key=object_key)
 
         message = f"trying to read the response body, response: {read_object}"
-        read_object = read_object['Body']
+        read_object = read_object['Body'].read()
 
         message = "Song received successfully from S3 bucket"
     except Exception as e:
@@ -82,7 +82,7 @@ def call_shazam_api(song_file):
         response = requests.post("https://shazam-api-free.p.rapidapi.com/shazam/recognize/",
                                  headers=headers, files=files)
         data = response.json()
-        message = f'accessing response attributes, respose: {response}'
+        message = f'accessing response attributes, response data: {data}'
         song_name = data['track']['title']
         return song_name, message
     except Exception as e:

@@ -10,33 +10,40 @@ from mysite.utils import execute_database_query, read_from_object_storage, call_
 def consume_rabbitmq():
     logger = logging.getLogger(__name__)
     try:
-        logger.critical('creating the pika client')
         connection = pika.BlockingConnection(pika.URLParameters(
             url='amqps://pbememzq:kza9uJTLxwR1stEpuig6LvOOYwhP6R3t@octopus.rmq3.cloudamqp.com/pbememzq'))
         channel = connection.channel()
         channel.queue_declare(queue='song_requests')
 
         def callback(ch, method, properties, body):
-            request_id = body
+            request_id = body.decode('utf-8')
 
-            logger.critical(f'callback has gotten the request_id: {request_id}')
+            logger.critical(f'callback parameters, body: {request_id}')
             # get the song from amazon s3
             read_object, message = read_from_object_storage(request_id)
 
-            logger.critical('object has been read from the storage')
+            logger.critical(f'object has been read from the storage, message: {message}, read_object: {read_object}')
+
+            if read_object is None:
+                return
             # get the song name with shazam api
             song_name, message = call_shazam_api(read_object)
 
-            logger.critical(f'song name has obtained with shazam, song name: {song_name}')
+            logger.critical(f'song name has obtained with shazam, message: {message}, song name: {song_name}')
+
+            if song_name is None:
+                return
             # get the song spotify ID with the song name
             spotify_id, message = call_spotify_search_api(song_name)
 
-            logger.critical(f'song spotify id: {spotify_id}')
+            logger.critical(f'song spotify id: {spotify_id}, message: {message}')
+            if spotify_id is None:
+                return
             # update the song ID and status in the requests table
             message = execute_database_query("""UPDATE your_table_name SET status = %s, songID = %s WHERE ID = %s""",
                                              ("ready", spotify_id, request_id))
 
-            logger.critical('song id and status updated in the database')
+            logger.critical(f'song id and status updated in the database, message: {message}')
             # This function is not async, so just print here
 
         logger.critical('calling consume on channel')
@@ -66,7 +73,6 @@ def send_song(request):
 
         # Specify the S3 bucket name and file key (path) within the bucket
         bucket_name = 'songs'
-        logger.critical("Unknown")
 
         # Upload the song file to the S3 bucket
         try:
@@ -83,18 +89,13 @@ def send_song(request):
         # adding the request ID to rabbitMQ
         try:
             # Connect to RabbitMQ server
-            logger.critical("trying to create connection")
             connection = pika.BlockingConnection(pika.URLParameters(
                 url='amqps://pbememzq:kza9uJTLxwR1stEpuig6LvOOYwhP6R3t@octopus.rmq3.cloudamqp.com/pbememzq'))
-            logger.critical("trying to get the channel")
-
             channel = connection.channel()
 
-            logger.critical("connection and channel set up")
             # Declare a queue named 'song_requests'
             channel.queue_declare(queue='song_requests')
 
-            logger.critical("queue declared")
             # Publish the message to the queue
             channel.basic_publish(exchange='', routing_key='song_requests', body=request_id.encode('utf-8'))
 
