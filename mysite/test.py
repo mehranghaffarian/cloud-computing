@@ -1,18 +1,6 @@
-import time
-
-
-@background(schedule=0)
-def listen_to_rabbitmq():
-    print("in the listening")
-
-
-
-async def consume():
-    time.sleep(5)
-    print("in the consume")
-
+from pydub import AudioSegment
 
 if __name__ == '__main__':
-    listen_to_rabbitmq()
-    for i in range(10):
-        print(i)
+    # Load audio file
+    audio = AudioSegment.from_file("../../Darde-Moshtarak 1.mp3", format="mp3")
+    print(audio)

@@ -3,8 +3,9 @@ import psycopg2
 import requests
 
 
-def execute_database_query(query, data):
+def execute_database_query(query, data=None):
     message = None
+    response = None
     try:
         message = "trying to create conn"
         # Connect to the PostgreSQL database
@@ -21,7 +22,10 @@ def execute_database_query(query, data):
         message = "cursor attained"
 
         # Execute the SQL query to insert data into the table
-        cur.execute(query, data)
+        if data is None:
+            response = cur.execute(query)
+        else:
+            response = cur.execute(query, data)
 
         message = "query executed"
 
@@ -38,7 +42,7 @@ def execute_database_query(query, data):
     except Exception as e:
         message = f"failed, previous step: {message}, error: {e}"
 
-    return message
+    return response, message
 
 
 def read_from_object_storage(object_key):
@@ -56,13 +60,10 @@ def read_from_object_storage(object_key):
 
     # Upload the song file to the S3 bucket
     try:
-        message = "trying to read from the object storage"
-        read_object = s3_client.get_object(Bucket=bucket_name, Key=object_key)
+        message = "trying to download from the object storage"
+        read_object = s3_client.download_file(Bucket=bucket_name, Key=object_key)
 
-        message = f"trying to read the response body, response: {read_object}"
-        read_object = read_object['Body'].read()
-
-        message = "Song received successfully from S3 bucket"
+        message = f"Song received successfully from S3 bucket, read_object: {read_object}"
     except Exception as e:
         message = f"Error receiving song from S3 bucket, previous step: {message}, error: {e}"
 
@@ -82,7 +83,7 @@ def call_shazam_api(song_file):
         response = requests.post("https://shazam-api-free.p.rapidapi.com/shazam/recognize/",
                                  headers=headers, files=files)
         data = response.json()
-        message = f'accessing response attributes, response data: {data}'
+        message = f'accessing response attributes, response jason: {data}'
         song_name = data['track']['title']
         return song_name, message
     except Exception as e:
@@ -94,18 +95,40 @@ def call_spotify_search_api(song_name):
     spotify_id = None
     message = "setting headers"
     headers = {
+        'q': song_name,
         'x-rapidapi-key': "7396f26c74mshc3ce21c7685d8b5p147355jsn002e8b49aab1",
         'x-rapidapi-host': "spotify23.p.rapidapi.com"
     }
-    files = {'q': song_name}
+    params = {'q': song_name}
 
     try:
         message = 'trying to send get request'
-        response = requests.get("https://spotify23.p.rapidapi.com/search/", headers=headers, files=files)
+        response = requests.get("https://spotify23.p.rapidapi.com/search/", headers=headers, params=params)
         data = response.json()
-        message = f'accessing response attributes, respose: {response}'
+        message = f'accessing response attributes'
         spotify_id = data['tracks']['items'][0]['data']['id']
         return spotify_id, message
     except Exception as e:
         message = f"Error getting song, previous step: {message}, error: {e}"
         return spotify_id, message
+
+
+def call_spotify_recommendation_api(song_id):
+    data = None
+    message = "setting headers"
+    headers = {
+        'x-rapidapi-key': "7396f26c74mshc3ce21c7685d8b5p147355jsn002e8b49aab1",
+        'x-rapidapi-host': "spotify23.p.rapidapi.com"
+    }
+    params = {'seed_tracks': song_id}
+
+    try:
+        message = 'trying to send get request'
+        response = requests.get("https://spotify23.p.rapidapi.com/recommendations/", headers=headers, params=params)
+        data = response.json()
+        message = f'accessing response attributes'
+
+        return data, message
+    except Exception as e:
+        message = f"Error getting song, previous step: {message}, error: {e}"
+        return data, message
