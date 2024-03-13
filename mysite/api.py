@@ -11,34 +11,33 @@ from mysite.utils import execute_database_query, read_from_object_storage, call_
 
 def send_recommended_songs_email(user_email):
     logger = logging.getLogger(__name__)
+    logger.critical(f'the 3rd service started')
 
     # getting songID with ready status
-    response, message = execute_database_query("""SELECT songID FROM songsrequests WHERE status = 'ready'""")
-    # spotify_id = response['songID']
-    spotify_id = '0c6xIDDpzE81m2q797ordA'
-    # request_id = response['ID']
-    request_id = 'test_id'
+    response, message = execute_database_query("""SELECT ID, songID FROM songsrequests WHERE status = 'ready'""")
+    spotify_id = response[0][1]
+    request_id = response[0][0]
 
-    logger.critical(f'ready records response received, message: {message}, response: {response}')
+    logger.critical(f'ready records received, message: {message}, response: {response}')
     # getting recommended songs
     response, message = call_spotify_recommendation_api(spotify_id)
 
-    logger.critical(f'recommended songs, message: {message}, response: {response}')
+    logger.critical(f'get the recommended songs, message: {message}, response: {response}')
     # sending user email
     response = requests.post(
-            "https://app.mailgun.com/app/sending/domains/sandboxa24d58344eb74bd9b73f39aedc34c3ff.mailgun.org",
+            "https://api.mailgun.net/v3/sandboxa24d58344eb74bd9b73f39aedc34c3ff.mailgun.org/messages/",
             auth=("api", "ab5b6638da085196bca42114b98dcbd8-b02bcf9f-0c9fd7c4"),
-            data={"from": "Excited User <mailgun@sandboxa24d58344eb74bd9b73f39aedc34c3ff.mailgun.org>",
-                  "to": [user_email],
+            data={"from": "mailgun@sandboxa24d58344eb74bd9b73f39aedc34c3ff.mailgun.org",
+                  "to": user_email,
                   "subject": "recommended songs",
-                  "text": "Testing some Mailgun awesomeness!"})
+                  "text": response})
 
     logger.critical(f'email send, response: {response}')
     # changing status to done
     _, message = execute_database_query("""UPDATE songsrequests SET status = %s WHERE ID = %s""",
                                         ("done", request_id))
 
-    logger.critical(f'song id and status updated in the database, message: {message}')
+    logger.critical(f'status updated to done in the database, message: {message}')
 
 
 def consume_rabbitmq(email):
@@ -78,14 +77,14 @@ def consume_rabbitmq(email):
             _, message = execute_database_query("""UPDATE songsrequests SET status = %s, songID = %s WHERE ID = %s""",
                                                 ("ready", spotify_id, request_id))
 
-            logger.critical(f'song id and status updated in the database, message: {message}')
-            # This function is not async, so just print here
+            logger.critical(f'status updated to ready and song id updated in the database, message: {message}')
+
+            send_recommended_songs_email(email)
 
         logger.critical('calling consume on channel')
         channel.basic_consume(queue='song_requests', on_message_callback=callback, auto_ack=True)
 
         channel.start_consuming()
-        send_recommended_songs_email(email)
     except Exception as e:
         logger.critical(f'consuming rabbitMQ faced error, error: {e}')
 

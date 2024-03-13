@@ -1,6 +1,6 @@
-import boto3
 import psycopg2
 import requests
+import boto3
 
 
 def execute_database_query(query, data=None):
@@ -27,7 +27,9 @@ def execute_database_query(query, data=None):
         else:
             response = cur.execute(query, data)
 
-        message = "query executed"
+        if response is not None:
+            response = cur.fetchall()
+            message = f"all rows fetched, response: {response}"
 
         # Commit the transaction to apply the changes
         conn.commit()
@@ -38,9 +40,9 @@ def execute_database_query(query, data=None):
         cur.close()
         conn.close()
 
-        message = f"request recorded in the database successfully"
+        message = f"query executed successfully"
     except Exception as e:
-        message = f"failed, previous step: {message}, error: {e}"
+        message = f"query failed, previous step: {message}, error: {e}"
 
     return response, message
 
@@ -52,8 +54,7 @@ def read_from_object_storage(object_key):
     s3_client = boto3.client('s3',
                              aws_access_key_id="0l7RJElo0SbDoyaTFCuj",
                              aws_secret_access_key="Zyr2T3rM71YvsbAOzHbBLvtQC7N6Po4xilmiDu1g",
-                             endpoint_url="https://m5j6.fra.idrivee2-40.com",
-                             )
+                             endpoint_url="https://m5j6.fra.idrivee2-40.com",)
 
     # Specify the S3 bucket name and file key (path) within the bucket
     bucket_name = 'songs'
@@ -61,7 +62,7 @@ def read_from_object_storage(object_key):
     # Upload the song file to the S3 bucket
     try:
         message = "trying to download from the object storage"
-        read_object = s3_client.download_file(Bucket=bucket_name, Key=object_key)
+        read_object = s3_client.get_object(Bucket=bucket_name, Key=object_key)['Body'].read()
 
         message = f"Song received successfully from S3 bucket, read_object: {read_object}"
     except Exception as e:
@@ -79,11 +80,11 @@ def call_shazam_api(song_file):
     files = {'upload_file': song_file}
 
     try:
-        message = 'trying to send post request'
+        message = 'trying to send post request in shazam'
         response = requests.post("https://shazam-api-free.p.rapidapi.com/shazam/recognize/",
                                  headers=headers, files=files)
         data = response.json()
-        message = f'accessing response attributes, response jason: {data}'
+        message = f'accessing shazam response attributes, response jason: {data}'
         song_name = data['track']['title']
         return song_name, message
     except Exception as e:
@@ -105,7 +106,7 @@ def call_spotify_search_api(song_name):
         message = 'trying to send get request'
         response = requests.get("https://spotify23.p.rapidapi.com/search/", headers=headers, params=params)
         data = response.json()
-        message = f'accessing response attributes'
+        message = f'accessing spotify search response attributes'
         spotify_id = data['tracks']['items'][0]['data']['id']
         return spotify_id, message
     except Exception as e:
@@ -125,10 +126,15 @@ def call_spotify_recommendation_api(song_id):
     try:
         message = 'trying to send get request'
         response = requests.get("https://spotify23.p.rapidapi.com/recommendations/", headers=headers, params=params)
-        data = response.json()
-        message = f'accessing response attributes'
+        data = response.json()['tracks']
 
-        return data, message
+        recommended_songs = []
+        for track in data:
+            recommended_songs.append((track['name'], track['id']))
+
+        message = f'accessing spotify recommendation response attributes'
+
+        return recommended_songs, message
     except Exception as e:
         message = f"Error getting song, previous step: {message}, error: {e}"
-        return data, message
+        return None, message
