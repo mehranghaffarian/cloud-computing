@@ -27,9 +27,8 @@ def execute_database_query(query, data=None):
         else:
             response = cur.execute(query, data)
 
-        if response is not None:
-            response = cur.fetchall()
-            message = f"all rows fetched, response: {response}"
+        response = cur.fetchall()
+        message = f"all rows fetched, response: {response}"
 
         # Commit the transaction to apply the changes
         conn.commit()
