@@ -25,14 +25,14 @@ def send_recommended_songs_email(user_email):
     logger.critical(f'get the recommended songs, message: {message}, response: {response}')
     # sending user email
     response = requests.post(
-            "https://api.mailgun.net/v3/sandboxa24d58344eb74bd9b73f39aedc34c3ff.mailgun.org/messages/",
-            auth=("api", "ab5b6638da085196bca42114b98dcbd8-b02bcf9f-0c9fd7c4"),
+            "https://api.mailgun.net/v3/sandboxa24d58344eb74bd9b73f39aedc34c3ff.mailgun.org/messages",
+            auth=("api", "b498d7888bc52a5432b97a98162c3844-b02bcf9f-b73762a2"),
             data={"from": "mailgun@sandboxa24d58344eb74bd9b73f39aedc34c3ff.mailgun.org",
                   "to": user_email,
                   "subject": "recommended songs",
                   "text": response})
 
-    logger.critical(f'email send, response: {response}')
+    logger.critical(f'email send to {user_email}, response: {response}')
     # changing status to done
     _, message = execute_database_query("""UPDATE songsrequests SET status = %s WHERE ID = %s""",
                                         ("done", request_id))
@@ -55,18 +55,15 @@ def consume_rabbitmq(email):
             # get the song from amazon s3
             read_object, message = read_from_object_storage(request_id)
 
-            logger.critical(f'object has been read from the storage, message: {message}')
+            logger.critical(f'object has been read from the storage, read_object: {read_object}, message: {message}')
 
-            if read_object is None:
-                return
             # get the song name with shazam api
-            song_name, message = call_shazam_api(read_object)
+            song_name, message = call_shazam_api(request_id + ".mp3")
 
             logger.critical(f'song name has obtained with shazam, message: {message}, song name: {song_name}')
 
             if song_name is None:
-                song_name = "Darde Moshtarak 1 "
-                # return
+                return
             # get the song spotify ID with the song name
             spotify_id, message = call_spotify_search_api(song_name)
 
@@ -113,7 +110,7 @@ def send_song(request):
 
         # Upload the song file to the S3 bucket
         try:
-            s3_client.upload_fileobj(song, bucket_name, request_id)
+            s3_client.upload_fileobj(song, bucket_name, request_id + ".mp3")
             logger.critical("Song uploaded successfully to S3 bucket")
         except Exception as e:
             logger.critical(f"Error uploading song to S3 bucket, error: {e}")
@@ -144,6 +141,6 @@ def send_song(request):
             logger.critical(f"failed to add ID to rabbitMQ, error: {e}")
 
         consume_rabbitmq(email)
-        return JsonResponse({"message": "every thing is ok"}, status=200)
+        return JsonResponse({"message": "processing the request"}, status=200)
     else:
         return JsonResponse({'error': 'Method not allowed'}, status=405)
